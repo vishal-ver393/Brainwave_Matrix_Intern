@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini E‑Commerce
+    
+  </title>
+  <style>
+    /* Simple modern styles (single-file). Tweak variables below */
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --accent:#2563eb; --muted:#6b7280; --success:#16a34a;
+      --radius:12px; --shadow: 0 6px 18px rgba(20,20,40,0.06);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:var(--bg); color:#0f172a}
+    header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(15,23,42,0.04);background:linear-gradient(180deg, rgba(255,255,255,0.6), transparent)}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    .title{font-weight:700}
+    .controls{display:flex;gap:12px;align-items:center}
+    input.search{padding:10px 12px;border-radius:10px;border:1px solid rgba(15,23,42,0.06);min-width:220px}
+    select, button{padding:10px 12px;border-radius:10px;border:1px solid rgba(15,23,42,0.06);background:white;cursor:pointer}
+    main{padding:24px;max-width:1200px;margin:0 auto}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+
+    .card{background:var(--card);padding:14px;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+    .card img{width:100%;height:160px;object-fit:cover;border-radius:10px}
+    .price{font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+    .btn{border:none;background:var(--accent);color:white;padding:10px;border-radius:10px;cursor:pointer}
+    .add{display:flex;gap:8px;align-items:center;justify-content:space-between}
+
+    /* cart drawer */
+    .cart-btn{position:relative}
+    .badge{position:absolute;top:-6px;right:-6px;background:var(--success);color:white;padding:4px 7px;border-radius:999px;font-size:12px}
+    .drawer{position:fixed;right:18px;top:70px;width:360px;max-height:70vh;background:var(--card);border-radius:12px;box-shadow:0 12px 40px rgba(10,10,20,0.12);overflow:auto;padding:14px;display:none}
+    .drawer.open{display:block}
+    .cart-item{display:flex;gap:10px;padding:8px;border-bottom:1px dashed rgba(15,23,42,0.04);align-items:center}
+    .cart-item img{width:60px;height:60px;object-fit:cover;border-radius:8px}
+    .qty{display:flex;gap:8px;align-items:center}
+    .small{font-size:13px}
+
+    /* modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(2,6,23,0.4);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal-bg.open{display:flex}
+    .modal{background:var(--card);width:100%;max-width:840px;border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:16px}
+    .col{flex:1}
+
+    /* footer */
+    footer{padding:18px;text-align:center;color:var(--muted);font-size:14px}
+
+    @media (max-width:720px){
+      header{padding:12px}
+      .controls{flex-direction:column;align-items:flex-end}
+      .drawer{right:8px;width:92%}
+      .row{flex-direction:column}
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">SE</div>
+      <div>
+       <div class="title">ShopEase — Online Shopping</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="search" class="search" placeholder="Search products, e.g. headphones" />
+      <select id="sort">
+        <option value="popular">Sort: Popular</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="price-desc">Price: High → Low</option>
+        <option value="new">Newest</option>
+      </select>
+      <button id="openCart" class="cart-btn">Cart 🛒 <span id="cartCount" class="badge">0</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section style="margin-bottom:18px;display:flex;gap:12px;align-items:center;justify-content:space-between">
+      <h2>Featured Products</h2>
+      <div class="muted">Auto-saved cart in localStorage • Click a card for details</div>
+    </section>
+
+    <section id="products" class="grid"></section>
+
+    <section style="margin-top:22px;display:flex;gap:12px;align-items:center;justify-content:space-between">
+      <div class="muted">Tip: Try the search, sort, or add items to cart.</div>
+      <div>
+        <button id="clearStorage">Reset Local Data</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Cart Drawer -->
+  <div id="drawer" class="drawer" role="dialog" aria-label="Shopping cart">
+    <h3>Your Cart</h3>
+    <div id="cartItems"></div>
+    <div style="padding:10px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="muted small">Subtotal</div>
+        <div id="subtotal" style="font-weight:700">₹0.00</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="checkoutBtn" class="btn">Checkout</button>
+        <button id="closeDrawer">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Product Details / Checkout -->
+  <div id="modalBg" class="modal-bg">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!--<footer>
+    Built for Task 2 — Brainwave Matrix Intern • Save this file as <code>index.html</code> and open in browser.
+  </footer>-->
+
+  <script>
+    /***** SAMPLE PRODUCT DATA *****/
+    const PRODUCTS = [
+      {id:1,title:'Wireless Headphones',price:2499,category:'Audio',desc:'Comfortable over-ear with 30h battery',img:'https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcQxEMNDHes8JAko21REhnJGGsPW_UU7ZBBTlWmxg5Xynw4loMnNdsXolAgDeYSwEBsPIkuDQBbu3qS19VkOAeRZ_5tlplM-ulc-BgsIFybxbxKgvCxx3Us6YQ'},
+      {id:2,title:'Smart Watch',price:3999,category:'Wearables',desc:'Heart-rate monitor, notifications',img:'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-compare-s11-202509_FMT_WHH?wid=296&hei=296&fmt=jpeg&qlt=90&.v=dWNxM2FBcWh6K3lqd1ZDZ0J0SmQzLzRxZ3huVnJIT2RsYmVuZmY3VmJyWVVRZEpaT1dTYTRVRGJYVlZ5a1RjamJGcXNRQnFCV0w3WVRjTExvdm1ic2Zod2h2SXJqUWFnZjgyKzVoUEVRcndXZEdHNUFPR0hYUU12cjI0VlFzM1A'},
+      {id:3,title:'Mechanical Keyboard',price:3199,category:'Accessories',desc:'RGB, hot-swappable switches',img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNAU7wIUPvDCvfb3DeKPdeL2S8Gu2qRrtx_g&s'},
+      {id:4,title:'Gaming Mouse',price:1599,category:'Accessories',desc:'High-precision sensor',img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQy5Paa5rDg3aG0hKxENOq1Ay3XTJHH1pMx9Q&s'},
+      {id:5,title:'Bluetooth Speaker',price:1999,category:'Audio',desc:'Portable, waterproof',img:'https://static1.industrybuying.com/products/it-electronics/speaker-headphones/speakers/portable-bluetooth-speakers/ITE.POR.521717483_1695375423664.webp'},
+      {id:6,title:'Fitness Band',price:1299,category:'Wearables',desc:'Sleep tracking, step counter',img:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTp8LI6dKJlNoQ5JE4FMbeIB9SRmZ4Qq9chMA&s'}
+    ];
+
+    /***** STATE & STORAGE *****/
+    const state = {
+      products: PRODUCTS.slice(),
+      cart: JSON.parse(localStorage.getItem('mini_cart')||'{}')
+    };
+
+    function saveCart(){
+      localStorage.setItem('mini_cart', JSON.stringify(state.cart));
+      renderCartCount();
+    }
+
+    function renderProducts(list){
+      const container = document.getElementById('products');
+      container.innerHTML='';
+      list.forEach(p=>{
+        const card = document.createElement('div'); card.className='card';
+        card.innerHTML = `
+          <img src="${p.img}" alt="${p.title}" loading="lazy">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">${p.title}</div>
+              <div class="muted small">${p.category}</div>
+            </div>
+            <div class="price">₹${p.price.toLocaleString()}</div>
+          </div>
+          <div class="muted small">${p.desc}</div>
+          <div class="add">
+            <button data-id="${p.id}" class="btn addBtn">Add</button>
+            <button data-id="${p.id}" class="small detailBtn">Details</button>
+          </div>
+        `;
+        // card click opens details too
+        container.appendChild(card);
+      })
+    }
+
+    function addToCart(id, qty=1){
+      const key = String(id);
+      state.cart[key] = (state.cart[key] || 0) + qty;
+      saveCart();
+      toast('Added to cart');
+    }
+
+    function removeFromCart(id){
+      delete state.cart[String(id)];
+      saveCart();
+    }
+
+    function changeQty(id, qty){
+      if(qty<=0){ removeFromCart(id); return; }
+      state.cart[String(id)] = qty;
+      saveCart();
+    }
+
+    function renderCart(){
+      const holder = document.getElementById('cartItems');
+      holder.innerHTML='';
+      const ids = Object.keys(state.cart);
+      if(ids.length===0){ holder.innerHTML='<div class="muted">Cart is empty.</div>'; document.getElementById('subtotal').textContent='₹0.00'; return }
+      let sub=0;
+      ids.forEach(k=>{
+        const p = PRODUCTS.find(x=>x.id===Number(k));
+        const qty = state.cart[k];
+        sub += p.price * qty;
+        const el = document.createElement('div'); el.className='cart-item';
+        el.innerHTML = `
+          <img src="${p.img}" alt="${p.title}">
+          <div style="flex:1">
+            <div style="font-weight:700">${p.title}</div>
+            <div class="muted small">₹${p.price.toLocaleString()} • ${p.category}</div>
+            <div class="qty" style="margin-top:8px">
+              <button data-id="${p.id}" class="dec">−</button>
+              <div class="small">${qty}</div>
+              <button data-id="${p.id}" class="inc">+</button>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700">₹${(p.price*qty).toLocaleString()}</div>
+            <div class="small"><button data-id="${p.id}" class="remove">Remove</button></div>
+          </div>
+        `;
+        holder.appendChild(el);
+      })
+      document.getElementById('subtotal').textContent = '₹' + sub.toLocaleString();
+    }
+
+    function renderCartCount(){
+      const count = Object.values(state.cart).reduce((a,b)=>a+b,0);
+      document.getElementById('cartCount').textContent = count;
+    }
+
+    /***** UI: modals, toast *****/
+    function openModal(html){
+      document.getElementById('modalContent').innerHTML = html;
+      document.getElementById('modalBg').classList.add('open');
+    }
+    function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
+
+    function toast(msg){
+      // quick ephemeral message
+      const t = document.createElement('div');
+      t.textContent = msg; t.style.position='fixed'; t.style.bottom='18px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
+      t.style.background='rgba(15,23,42,0.9)'; t.style.color='white'; t.style.padding='10px 14px'; t.style.borderRadius='10px'; t.style.zIndex=9999;
+      document.body.appendChild(t); setTimeout(()=>t.remove(),1400);
+    }
+
+    /***** EVENTS *****/
+    document.addEventListener('click', (e)=>{
+      if(e.target.matches('.addBtn')){
+        addToCart(Number(e.target.dataset.id)); renderCart();
+      }
+      if(e.target.matches('.detailBtn')){
+        const id = Number(e.target.dataset.id); openProductModal(id);
+      }
+      if(e.target.matches('#openCart')){
+        document.getElementById('drawer').classList.toggle('open'); renderCart();
+      }
+      if(e.target.matches('#closeDrawer')){
+        document.getElementById('drawer').classList.remove('open');
+      }
+      if(e.target.matches('.inc')){
+        const id = Number(e.target.dataset.id); changeQty(id, state.cart[String(id)]+1); renderCart();
+      }
+      if(e.target.matches('.dec')){
+        const id = Number(e.target.dataset.id); changeQty(id, state.cart[String(id)]-1); renderCart();
+      }
+      if(e.target.matches('.remove')){
+        const id = Number(e.target.dataset.id); removeFromCart(id); renderCart();
+      }
+      if(e.target.matches('#checkoutBtn')){
+        openCheckout();
+      }
+      if(e.target.matches('#modalBg') || e.target.closest('.modal')===null){ /* ignore click outside handled below */ }
+    });
+
+    // modal close when clicking background
+    document.getElementById('modalBg').addEventListener('click', (e)=>{
+      if(e.target.id==='modalBg') closeModal();
+    });
+
+    // search and sort
+    document.getElementById('search').addEventListener('input', (e)=>{
+      applyFilters();
+    });
+    document.getElementById('sort').addEventListener('change', applyFilters);
+
+    document.getElementById('clearStorage').addEventListener('click', ()=>{
+      if(confirm('Clear localStorage (cart + saved)?')){ localStorage.clear(); state.cart = {}; saveCart(); renderCart(); renderProducts(PRODUCTS); }
+    });
+
+    /***** FILTERS & SORTING *****/
+    function applyFilters(){
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const sort = document.getElementById('sort').value;
+      let list = PRODUCTS.filter(p=> p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+      if(sort==='price-asc') list.sort((a,b)=>a.price-b.price);
+      if(sort==='price-desc') list.sort((a,b)=>b.price-a.price);
+      if(sort==='new') list = list.slice().reverse();
+      renderProducts(list);
+    }
+
+    /***** PRODUCT MODAL & CHECKOUT *****/
+    function openProductModal(id){
+      const p = PRODUCTS.find(x=>x.id===id);
+      openModal(`
+        <div class="row">
+          <div class="col"><img src="${p.img}" alt="${p.title}" style="width:100%;border-radius:10px" /></div>
+          <div class="col">
+            <h3>${p.title}</h3>
+            <div class="muted">${p.category}</div>
+            <p style="margin-top:10px">${p.desc}</p>
+            <div style="font-weight:700;font-size:20px;margin-top:8px">₹${p.price.toLocaleString()}</div>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button class="btn" onclick="addToCart(${p.id});renderCart();closeModal();">Add to Cart</button>
+              <button onclick="closeModal()">Close</button>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function openCheckout(){
+      const items = Object.keys(state.cart).map(k=>{
+        const p = PRODUCTS.find(x=>x.id===Number(k)); return {p, qty: state.cart[k]}
+      });
+      if(items.length===0){ alert('Your cart is empty'); return; }
+      const subtotal = items.reduce((s,i)=>s + i.p.price*i.qty,0);
+      openModal(`
+        <h3>Checkout</h3>
+        <div class="row">
+          <div class="col">
+            <div class="muted">Items</div>
+            <ul style="padding-left:18px">
+              ${items.map(i=>`<li>${i.p.title} × ${i.qty} — ₹${(i.p.price*i.qty).toLocaleString()}</li>`).join('')}
+            </ul>
+            <div style="margin-top:12px"><strong>Subtotal: ₹${subtotal.toLocaleString()}</strong></div>
+          </div>
+          <div class="col">
+            <div class="muted">Shipping & Payment (simulated)</div>
+            <form id="checkoutForm">
+              <div style="margin-top:8px"><input placeholder="Full name" required style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06)"></div>
+              <div style="margin-top:8px"><input placeholder="Email" required style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06)"></div>
+              <div style="margin-top:8px"><input placeholder="Address" required style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06)"></div>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button type="submit" class="btn">Place Order</button>
+                <button type="button" onclick="closeModal()">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `);
+
+      document.getElementById('checkoutForm').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        // simulate order placement
+        const orderId = 'ORD' + Math.floor(Math.random()*900000+100000);
+        state.cart = {}; saveCart(); renderCart();
+        openModal(`<h3>Thank you!</h3><p>Your order <strong>${orderId}</strong> has been placed.</p><p class="muted">This is a simulated checkout for the internship task.</p><div style="margin-top:12px"><button onclick="closeModal()">Close</button></div>`);
+      }, {once:true});
+    }
+
+    // initial render
+    renderProducts(PRODUCTS);
+    renderCartCount();
+  </script>
+</body>
+</html>
