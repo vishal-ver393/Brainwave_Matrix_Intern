@@ -1,0 +1,65 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f9;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+#currentDay {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+}
+
+.time-block {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.time-label {
+    width: 80px;
+    padding: 10px;
+    background: #ddd;
+    text-align: center;
+    border-radius: 5px 0 0 5px;
+}
+
+.task-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-left: none;
+}
+
+.save-btn {
+    padding: 10px 15px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 0 5px 5px 0;
+}
+
+.save-btn:hover {
+    background: #45a049;
+}
+
+.completed {
+    text-decoration: line-through;
+    color: gray;
+}
